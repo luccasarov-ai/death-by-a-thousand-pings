@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Death by a Thousand Pings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+/* Layout: one phone-first column, sections stacked like a notification feed; the accent marks only what's interactive or important. */
+:root{
+  --bg:#F6F7F9; --surface:#FFFFFF; --fg:#16181D; --muted:#596070; --line:#DADDE3;
+  --accent:#B4410E; --accent-soft:#FBE9E0; --on-accent:#FFFFFF; --good:#1F6B45; --good-soft:#E3F1E9;
+  --display:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'Source Sans 3','Segoe UI','Helvetica Neue',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121417; --surface:#1B1E23; --fg:#ECEEF1; --muted:#A3A9B4; --line:#2E333B;
+  --accent:#F08A55; --accent-soft:#3A2419; --on-accent:#16181D; --good:#6FCB98; --good-soft:#18301F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1B1E23; --fg:#ECEEF1; --muted:#A3A9B4; --line:#2E333B;
+  --accent:#F08A55; --accent-soft:#3A2419; --on-accent:#16181D; --good:#6FCB98; --good-soft:#18301F; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.5;padding-inline:16px;padding-block:24px 48px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1,h2{font-family:var(--display);text-transform:uppercase;letter-spacing:.5px;margin:0;text-wrap:balance}
+h1{font-size:clamp(46px,13vw,72px);font-weight:800;line-height:.92}
+h1 span{color:var(--accent)}
+h2{font-size:30px;font-weight:800;line-height:1}
+p{margin:0}
+.eyebrow{font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:14px}
+.lead{font-size:20px;font-weight:600;line-height:1.35}
+.muted{color:var(--muted)}
+.small{font-size:15px}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* ping demo */
+.demo{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.feed{display:flex;flex-direction:column;gap:8px;min-height:44px}
+.ping{display:flex;gap:10px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:15px;line-height:1.3;animation:drop .25s ease-out}
+.ping b{display:block;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:600}
+.dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--accent);margin-top:5px}
+.empty{color:var(--muted);font-size:15px;padding:10px 0}
+@keyframes drop{from{transform:translateY(-6px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ping{animation:none}}
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter-row{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 18px;border-radius:999px;border:1.5px solid var(--accent);background:var(--accent);color:var(--on-accent);font-weight:700}
+.btn.ghost{background:transparent;color:var(--accent)}
+.verdict{background:var(--accent-soft);border-radius:10px;padding:12px 14px;font-weight:600}
+
+/* terms + numbers */
+.terms{display:grid;gap:12px}
+.term{border-top:2px solid var(--fg);padding-top:10px;display:flex;flex-direction:column;gap:4px}
+.term h3{margin:0;font-size:18px}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0;padding:0;list-style:none}
+.nums li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.nums strong{font-family:var(--display);font-weight:800;font-size:32px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.nums span{font-size:14px;color:var(--muted);line-height:1.3}
+
+/* four questions */
+.qs{display:flex;flex-direction:column;gap:10px}
+details{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;gap:12px;align-items:center;min-height:44px}
+summary::-webkit-details-marker{display:none}
+summary .n{font-family:var(--display);font-weight:800;font-size:26px;color:var(--accent);width:18px;flex:none}
+summary .t{flex:1;font-weight:700;line-height:1.3}
+summary .chev{flex:none;transition:transform .2s;color:var(--muted)}
+details[open] .chev{transform:rotate(180deg)}
+.qbody{padding:0 16px 16px 46px;display:flex;flex-direction:column;gap:8px;font-size:16px}
+.qbody .fix{color:var(--good);font-weight:600}
+
+/* debate */
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice{min-height:64px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font-weight:700;padding:10px;line-height:1.2}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+
+/* norms */
+.norms{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:560px){.norms{grid-template-columns:1fr 1fr}}
+fieldset{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:14px;margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+legend{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:1px;text-transform:uppercase;padding:0 6px}
+.keep legend{color:var(--good)} .stop legend{color:var(--accent)}
+label{display:flex;gap:8px;align-items:center;font-variant-numeric:tabular-nums;color:var(--muted);font-size:15px}
+input[type=text]{flex:1;min-width:0;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:16px;background:var(--bg);color:var(--fg)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;padding:6px 12px;border-radius:999px;border:1px dashed var(--line);background:transparent;color:var(--fg);font-size:14px}
+.chip.k::before{content:"+ keep: ";color:var(--good);font-weight:700}
+.chip.s::before{content:"+ stop: ";color:var(--accent);font-weight:700}
+.status{font-size:14px;color:var(--muted);min-height:20px}
+footer{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+</style>
+</head><body>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:14px">
+  <span class="eyebrow">OB Roundtable</span>
+  <h1>Death by a <span>Thousand Pings</span></h1>
+  <p class="lead">Burnout isn't your workload. It's your collaboration load.</p>
+  <p class="muted small">Based on Cross, Dillon &amp; Reeves, "What's Fueling Burnout in Your Organization?" Harvard Business Review, October 2023.</p>
+</header>
+
+<section aria-labelledby="demo-h">
+  <h2 id="demo-h">Feel it first</h2>
+  <p>Each ping is small. Tap a few times and watch what they add up to.</p>
+  <div class="demo">
+    <div class="feed" id="feed" aria-live="polite"><p class="empty">No pings yet. Enjoy it while it lasts.</p></div>
+    <div class="meter">
+      <div class="meter-row"><span>Microstress</span><span id="count">0 pings</span></div>
+      <div class="bar" role="progressbar" aria-label="Microstress level" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0" id="bar"><i id="fill"></i></div>
+    </div>
+    <p class="verdict" id="verdict" hidden>No single ping broke you. All of them together did. That's microstress, and it spreads to everyone you work with.</p>
+    <div class="row">
+      <button class="btn" id="pingBtn" type="button">Send a ping</button>
+      <button class="btn ghost" id="resetBtn" type="button">Clear</button>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="idea-h">
+  <h2 id="idea-h">The big idea</h2>
+  <p>Most people blame burnout on more work. The authors say the work itself hasn't grown that much. What's grown is everything you have to coordinate to get it done.</p>
+  <div class="terms">
+    <div class="term"><h3>Collaborative footprint</h3><p>How much and how often you have to work with other people to get your job done.</p></div>
+    <div class="term"><h3>Microstress</h3><p>Small, routine stress from colleagues: a vague request, a last-minute change, a decision made in a chat you weren't in. Minor alone, crushing together.</p></div>
+  </div>
+  <ul class="nums" aria-label="Numbers from the article">
+    <li><strong>50%+</strong><span>growth in the collaborative footprint over 15 years</span></li>
+    <li><strong>6–9</strong><span>channels teams use: email, Slack, texts, calls, meetings…</span></li>
+    <li><strong>5–6</strong><span>project teams per person, about 15 people each</span></li>
+    <li><strong>8–12%</strong><span>of a team's time saved by agreeing on norms</span></li>
+  </ul>
+</section>
+
+<section aria-labelledby="q-h">
+  <h2 id="q-h">Four questions leaders should ask</h2>
+  <p class="muted small">Tap each one.</p>
+  <div class="qs">
+    <details id="q1"><summary><span class="n">1</span><span class="t">Can we reduce structural complexity?</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="qbody"><p>Flat and matrix structures mean juggling several bosses, and teams drown in uncoordinated requests. Companies keep adding complexity but rarely remove it.</p><p class="fix">Fix: give new teams and procedures a sunset date. Simplify on purpose, like Trader Joe's keeping its product count under 10% of the industry average.</p></div></details>
+    <details id="q2"><summary><span class="n">2</span><span class="t">Does our workflow make sense?</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="qbody"><p>Six to nine channels, each used differently. The real request is buried in paragraph 10, or a decision happens in a chat half the team never sees.</p><p class="fix">Fix: agree on 3 habits to keep and 3 to stop. It can save a team 8–12% of its time.</p></div></details>
+    <details id="q3"><summary><span class="n">3</span><span class="t">Have too many teams spiked microstress?</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="qbody"><p>People sit on 5–6 project teams on top of their main one, so nobody has time to build trust.</p><p class="fix">Fix: fewer, smaller, steadier teams. One company found no one should switch teams in under 15 months.</p></div></details>
+    <details id="q4"><summary><span class="n">4</span><span class="t">Have we built purpose into everyday work?</span><svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+      <div class="qbody"><p>Work done through screens turns transactional. Purpose also comes from small moments, like building on a colleague's idea.</p><p class="fix">Fix: connect daily work to the goal, and use it to cut what doesn't matter. And check whether you're the one creating microstress.</p></div></details>
+  </div>
+</section>
+
+<section aria-labelledby="d-h">
+  <h2 id="d-h">Whose job is burnout?</h2>
+  <p>Pick a side, then see where the article lands.</p>
+  <div class="choices">
+    <button class="choice" type="button" aria-pressed="false" data-side="emp">The employee's</button>
+    <button class="choice" type="button" aria-pressed="false" data-side="org">The organization's</button>
+  </div>
+  <p class="verdict" id="debate" hidden></p>
+</section>
+
+<section aria-labelledby="n-h">
+  <h2 id="n-h">Your 3 keep, 3 stop</h2>
+  <p>Think of a team you're on now: a class group, your job, an internship. Write your norms, or tap a suggestion to fill the next empty line.</p>
+  <div class="norms">
+    <fieldset class="keep"><legend>Keep</legend>
+      <label for="k1">1.<input type="text" id="k1" maxlength="90" autocomplete="off"></label>
+      <label for="k2">2.<input type="text" id="k2" maxlength="90" autocomplete="off"></label>
+      <label for="k3">3.<input type="text" id="k3" maxlength="90" autocomplete="off"></label>
+    </fieldset>
+    <fieldset class="stop"><legend>Stop</legend>
+      <label for="s1">1.<input type="text" id="s1" maxlength="90" autocomplete="off"></label>
+      <label for="s2">2.<input type="text" id="s2" maxlength="90" autocomplete="off"></label>
+      <label for="s3">3.<input type="text" id="s3" maxlength="90" autocomplete="off"></label>
+    </fieldset>
+  </div>
+  <div class="chips" aria-label="Suggestions">
+    <button class="chip k" type="button">One shared doc per project</button>
+    <button class="chip k" type="button">A clear owner for every task</button>
+    <button class="chip k" type="button">Quick huddle when it gets complicated</button>
+    <button class="chip s" type="button">Group chat after 10 p.m.</button>
+    <button class="chip s" type="button">Reply-all on "sounds good"</button>
+    <button class="chip s" type="button">Meetings that could be a message</button>
+    <button class="chip s" type="button">Decisions in side chats</button>
+  </div>
+  <div class="row">
+    <button class="btn" id="copyBtn" type="button">Copy my norms</button>
+    <button class="btn ghost" id="clearBtn" type="button">Start over</button>
+  </div>
+  <p class="status" id="status" aria-live="polite">Your answers stay on this phone. Copy them to send to your team.</p>
+</section>
+
+<footer>
+  <p>You can't meditate your way out of a broken system, but you can stop adding to it, starting with your next group chat.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var PINGS=[
+    ["Slack","Quick call? Won't take long."],
+    ["Email","Reply-all: Sounds good!"],
+    ["Text","Change of plans, deadline is tomorrow now."],
+    ["Teams","Decision made in a side chat. You weren't in it."],
+    ["Calendar","Kickoff: your 6th project team this semester"],
+    ["Email","Long update. The actual ask is in paragraph 10."],
+    ["Slack","Second boss: actually, THIS is the priority."],
+    ["Email","Sent 11:47 p.m.: Just a thought for tomorrow…"]
+  ];
+  var MAX=PINGS.length,n=0;
+  var feed=document.getElementById('feed'),fill=document.getElementById('fill'),bar=document.getElementById('bar'),
+      count=document.getElementById('count'),verdict=document.getElementById('verdict'),pingBtn=document.getElementById('pingBtn');
+  function renderMeter(){
+    fill.style.width=(n/MAX*100)+'%';bar.setAttribute('aria-valuenow',n);
+    count.textContent=n+(n===1?' ping':' pings');verdict.hidden=n<MAX;
+    pingBtn.disabled=n>=MAX;pingBtn.textContent=n>=MAX?'Inbox full':'Send a ping';
+  }
+  pingBtn.addEventListener('click',function(){
+    if(n>=MAX)return;
+    if(n===0)feed.innerHTML='';
+    var p=PINGS[n],el=document.createElement('div');el.className='ping';
+    var d=document.createElement('span');d.className='dot';
+    var t=document.createElement('span');var b=document.createElement('b');b.textContent=p[0];
+    t.appendChild(b);t.appendChild(document.createTextNode(p[1]));
+    el.appendChild(d);el.appendChild(t);feed.insertBefore(el,feed.firstChild);
+    while(feed.children.length>4)feed.removeChild(feed.lastChild);
+    n++;renderMeter();
+  });
+  document.getElementById('resetBtn').addEventListener('click',function(){
+    n=0;feed.innerHTML='<p class="empty">No pings yet. Enjoy it while it lasts.</p>';renderMeter();
+  });
+
+  var debate=document.getElementById('debate');
+  var TEXT={
+    emp:"Fair point: boundaries and self-care help. But the article sides with the organization. One person can't fix a culture of late-night emails and three competing bosses. The biggest lever is how the work is designed, and leaders own that.",
+    org:"The article agrees: the biggest lever is how work is designed, and leaders own that. The twist: every one of us is part of the organization, and we all create microstress for someone else."
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('.choice'),function(btn){
+    btn.addEventListener('click',function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.choice'),function(b){b.setAttribute('aria-pressed',b===btn?'true':'false')});
+      debate.textContent=TEXT[btn.dataset.side];debate.hidden=false;
+    });
+  });
+
+  var ids=['k1','k2','k3','s1','s2','s3'],KEY='pings-norms-v1',status=document.getElementById('status');
+  function save(){var o={};ids.forEach(function(i){o[i]=document.getElementById(i).value});try{localStorage.setItem(KEY,JSON.stringify(o))}catch(e){}}
+  try{var saved=JSON.parse(localStorage.getItem(KEY)||'{}');ids.forEach(function(i){if(saved[i])document.getElementById(i).value=saved[i]})}catch(e){}
+  ids.forEach(function(i){document.getElementById(i).addEventListener('input',save)});
+  Array.prototype.forEach.call(document.querySelectorAll('.chip'),function(c){
+    c.addEventListener('click',function(){
+      var group=c.classList.contains('k')?['k1','k2','k3']:['s1','s2','s3'];
+      var target=group.map(function(i){return document.getElementById(i)}).filter(function(el){return !el.value.trim()})[0];
+      if(!target){status.textContent=(group[0]==='k1'?'Keep':'Stop')+' list is full. Clear a line to add more.';return}
+      target.value=c.textContent;save();status.textContent='Added. Edit it to fit your team.';
+    });
+  });
+  function listText(){
+    function lines(g){return g.map(function(i){return document.getElementById(i).value.trim()}).filter(Boolean).map(function(v,ix){return (ix+1)+'. '+v}).join('\n')||'(none yet)'}
+    return 'Our team norms\n\nKEEP\n'+lines(['k1','k2','k3'])+'\n\nSTOP\n'+lines(['s1','s2','s3']);
+  }
+  document.getElementById('copyBtn').addEventListener('click',function(){
+    var txt=listText();
+    function fallback(){status.textContent='Copy didn\'t work here. Press and hold a line to copy it, or take a screenshot.'}
+    try{navigator.clipboard.writeText(txt).then(function(){status.textContent='Copied. Paste it into your team chat.'},fallback)}catch(e){fallback()}
+  });
+  document.getElementById('clearBtn').addEventListener('click',function(){
+    ids.forEach(function(i){document.getElementById(i).value=''});save();status.textContent='Cleared.';
+  });
+  renderMeter();
+})();
+</script>
+</body></html>
